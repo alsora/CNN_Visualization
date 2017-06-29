@@ -33,6 +33,6 @@ It's possible to test the implementation on the standard CaffeNet network. To do
 
 Finally it's possible to launch the main script.
 
-        $python tsneCNN.py -i image_dir -g
+        $ python tsneCNN.py -i image_dir -g
 
 NOTE: The -g flag has to be used only if we want to run the script in gpu mode.
