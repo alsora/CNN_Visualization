@@ -16,7 +16,10 @@ import caffeCNN_utils as CNN
 
 
 netLayers = {
-    'caffenet': 'fc7'
+    'caffenet': 'fc7',
+
+    'googlenet': 'inception_5b/output'
+   #'googlenet': 'loss3/classifier'
 }
 
 
@@ -117,8 +120,8 @@ def main(argv):
     mappedLabels = [classesToNumbers.get(key) for key in labels]
     mappedPredictedLabels = [classesToNumbers.setdefault(key, len(classes) + 1) for key in predictedLabels]
 
-    tsne.showPoints(positions, mappedLabels)
-    tsne.showPoints(positions, mappedPredictedLabels)
+    tsne.showPoints(positions, mappedLabels, True)
+    tsne.showPoints(positions, mappedPredictedLabels, False)
 
 
 

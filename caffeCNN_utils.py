@@ -62,10 +62,10 @@ def predictLabels(imageSet, net):
         net.blobs['data'].data[...] = image
         output = net.forward()
 
-        plabel = int(output['prob'].argmax())
-        #best_n = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
+        #plabel = int(output['prob'].argmax())
+        best_n = net.blobs['prob'].data[0].flatten().argsort()[-1:-5:-1]
 
-        labelsVector.append(plabel.copy)
+        labelsVector.append(best_n.copy())
         
         string_to_print = '{} of {}'.format(num, totalImages)
         backspace(string_to_print)
@@ -88,11 +88,12 @@ def getFeaturesAndLables(imageSet, net, extractionLayerName):
         output = net.forward()
         
         features = net.blobs[extractionLayerName].data[0]
-        plabel = int(output['prob'].argmax())
-        #best_n = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
+        #plabel = int(output['prob'].argmax())
+        best_n = net.blobs['prob'].data[0].flatten().argsort()[-1:-5:-1]
         
         featuresVector.append(features.copy().flatten())
-        labelsVector.append(plabel)
+        #labelsVector.append(plabel)
+        labelsVector.append(best_n.copy())
     
 
         string_to_print = '{} of {}'.format(num, totalImages)
@@ -106,7 +107,8 @@ def getFeaturesAndLables(imageSet, net, extractionLayerName):
 
 def getPrecision(trueLabels, predictedLabels):
 
-    countCorrect = 0
+    countCorrect1 = 0
+    countCorrect5 = 0
 
     if len(trueLabels) != len(predictedLabels):
         print 'True and Predicted lists have different size.'
@@ -118,14 +120,20 @@ def getPrecision(trueLabels, predictedLabels):
     for index, item in enumerate(trueLabels):
         
         prediction = predictedLabels[index]
-        if prediction == item:
-            countCorrect += 1
+        if prediction[0] == item:
+            countCorrect1 += 1
 
-    percentage = 100.0*countCorrect/len(trueLabels)
+        if item in prediction:
+            countCorrect5 += 1
 
-    print percentage, ' % Correct predictions'
+    percentage1 = 100.0 * countCorrect1/len(trueLabels)
+    percentage5 = 100.0 * countCorrect5/len(trueLabels)
 
-    return percentage
+    print percentage1, ' % Top1 Correct predictions'
+    print percentage5, ' % Top5 Correct predictions'
+
+
+    return percentage1
 
 
 

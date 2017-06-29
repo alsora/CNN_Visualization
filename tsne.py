@@ -1,7 +1,7 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib import animation
+from matplotlib.animation import FuncAnimation
 from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import pairwise_distances
 from skdata.mnist.views import OfficialImageClassification
@@ -186,11 +186,52 @@ def computeProbabilities(X, perplexity = 30.0, tolerance = 1e-5):
 
 
 
-def showPoints(positions, labels):
+def showPoints(positions, labels, movie=True):
 
 	finalData = positions[-1] 
 	plt.scatter(finalData[:,0], finalData[:,1], 20, labels)
 	plt.show();
+
+	positions = np.asarray(positions)
+
+	if movie:
+		fig = plt.figure(figsize=(10, 10))
+		ax = fig.add_axes([0, 0, 1, 1], frameon=False)
+
+		maxX = np.amax(positions[:,:,0])
+		minX = np.amin(positions[:,:,0])
+		maxY = np.amax(positions[:,:,1])
+		minY = np.amin(positions[:,:,1])
+
+		limit = max(maxX, maxY, minX, minY, key=abs) * 1.2
+
+		ax.set_xlim(-limit, limit), ax.set_xticks([])
+		ax.set_ylim(-limit, limit), ax.set_yticks([])
+		rect = fig.patch
+		rect.set_facecolor('white')
+
+		currentPositions = positions[0]
+
+		scat = ax.scatter(currentPositions[:, 0], currentPositions[:, 1],20, labels )
+
+		def update(frame_number):
+
+		    num = frame_number*5
+
+		    currentPositions = positions[num]
+
+		    scat.set_offsets(currentPositions)
+
+
+		# Construct the animation, using the update function as the animation
+		# director.
+
+		numFrames = len(positions)/5
+
+		animation = FuncAnimation(fig, update, interval=100, frames = numFrames, repeat = False)
+		plt.show()
+		animation.save('movie.mp4')
+
 
 
 
