@@ -5,7 +5,8 @@ from matplotlib.animation import FuncAnimation
 from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import pairwise_distances
 from skdata.mnist.views import OfficialImageClassification
-
+from skimage.transform import resize
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 
 
@@ -282,6 +283,31 @@ def showMovie(positions, labels):
 	plt.show()
 	animation.save('movie.mp4')
 
+
+
+
+def imagesPlot(images, positions, zoom = 0.25):
+
+	fig, ax = plt.subplots()
+
+
+	for num in range (len(images)):
+
+		x = positions[num, 0]
+		y = positions[num, 1]
+		image = images[num]
+
+		im = OffsetImage(image, zoom=zoom)
+		x,y = np.atleast_1d(x,y)
+
+		for x0,y0 in zip(x,y):
+			ab = AnnotationBbox(im, (x0, y0), xycoords='data', frameon=False)
+			ax.add_artist(ab)
+
+		ax.update_datalim(np.column_stack([x, y]))
+		ax.autoscale()
+    
+	plt.show()
 
 
 

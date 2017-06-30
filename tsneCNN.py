@@ -18,8 +18,8 @@ import caffeCNN_utils as CNN
 netLayers = {
     'caffenet': 'fc7',
 
-    'googlenet': 'inception_5b/output'
-   #'googlenet': 'loss3/classifier'
+   #'googlenet': 'inception_5b/output'
+   'googlenet': 'loss3/classifier'
 }
 
 
@@ -119,7 +119,7 @@ def main(argv):
 
     tsne.showMovie(positions, mappedLabels)
 
-
+    tsne.imagesPlot(images, positions[-1])
 
 
 
