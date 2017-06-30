@@ -72,7 +72,7 @@ def loadImageNetFiles(folder, numImages = 100, classes = []):
     for root, dirs, files in walk(folder):
         
         label = root.split(os.path.sep)[-1]
-        print label
+
         if classes and label not in classes:
             continue
 

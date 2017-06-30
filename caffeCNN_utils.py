@@ -45,7 +45,7 @@ def extractFeatures(imageSet, net, extractionLayerName):
         
         featuresVector.append(features.copy().flatten())
         
-        string_to_print = '{} of {}'.format(num, totalImages)
+        string_to_print = '{} of {}'.format(num + 1, totalImages)
         backspace(string_to_print)
 
     print '\n'
@@ -67,7 +67,7 @@ def predictLabels(imageSet, net):
 
         labelsVector.append(best_n.copy())
         
-        string_to_print = '{} of {}'.format(num, totalImages)
+        string_to_print = '{} of {}'.format(num + 1, totalImages)
         backspace(string_to_print)
 
     print '\n'
@@ -96,7 +96,7 @@ def getFeaturesAndLables(imageSet, net, extractionLayerName):
         labelsVector.append(best_n.copy())
     
 
-        string_to_print = '{} of {}'.format(num, totalImages)
+        string_to_print = '{} of {}'.format(num + 1, totalImages)
         backspace(string_to_print)
 
     print '\n'
@@ -181,3 +181,22 @@ def outputToSynsets(output, word_synsets):
         synsets.append(synset)
 
     return synsets
+
+
+
+def synsetsToWords(synsets, synset_words):
+
+    newLabels = []
+
+    for synset in synsets:
+
+        index = np.where(synset_words[:,0] == synset)
+
+        fullDescription = synset_words[index[0],1][0]
+
+        description = fullDescription.split(',')[0]
+
+        newLabels.append(description)
+
+
+    return newLabels

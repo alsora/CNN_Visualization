@@ -186,51 +186,101 @@ def computeProbabilities(X, perplexity = 30.0, tolerance = 1e-5):
 
 
 
-def showPoints(positions, labels, movie=True):
+def showPoints(position, labels):
 
-	finalData = positions[-1] 
-	plt.scatter(finalData[:,0], finalData[:,1], 20, labels)
+	classes = list(set(labels))
+
+	numClasses = len(classes)
+
+
+	perClassPositions_t = [[] for x in range(numClasses)]
+
+	for ind, point in enumerate(position):
+
+		subListID = classes.index(labels[ind])
+
+		perClassPositions_t[subListID].append(point)
+
+
+	finalData = perClassPositions_t
+	plotStorage = []
+	colors = []
+
+	cmap = plt.cm.get_cmap('hsv', numClasses + 1)
+
+	for index, lab in enumerate(finalData):
+	
+		lab = np.asarray(lab)		
+
+		x = plt.scatter(lab[:,0], lab[:,1], 20, c = cmap(index))
+
+
+		plotStorage.append(x)
+		colors.append(cmap(index))
+
+	plt.legend(plotStorage,
+           classes,
+           scatterpoints=1,
+           loc='lower left',
+           ncol=3,
+           fontsize=8)
+
 	plt.show();
+
+
+
+
+
+def showMovie(positions, labels):
 
 	positions = np.asarray(positions)
 
-	if movie:
-		fig = plt.figure(figsize=(10, 10))
-		ax = fig.add_axes([0, 0, 1, 1], frameon=False)
+	classes = list(set(labels))
 
-		maxX = np.amax(positions[:,:,0])
-		minX = np.amin(positions[:,:,0])
-		maxY = np.amax(positions[:,:,1])
-		minY = np.amin(positions[:,:,1])
+	numClasses = len(classes)
 
-		limit = max(maxX, maxY, minX, minY, key=abs) * 1.2
+	fig = plt.figure(figsize=(10, 10))
+	ax = fig.add_axes([0, 0, 1, 1], frameon=False)
 
-		ax.set_xlim(-limit, limit), ax.set_xticks([])
-		ax.set_ylim(-limit, limit), ax.set_yticks([])
-		rect = fig.patch
-		rect.set_facecolor('white')
+	maxX = np.amax(positions[:,:,0])
+	minX = np.amin(positions[:,:,0])
+	maxY = np.amax(positions[:,:,1])
+	minY = np.amin(positions[:,:,1])
 
-		currentPositions = positions[0]
+	limit = max(maxX, maxY, minX, minY, key=abs) * 1.2
 
-		scat = ax.scatter(currentPositions[:, 0], currentPositions[:, 1],20, labels )
+	ax.set_xlim(-limit, limit), ax.set_xticks([])
+	ax.set_ylim(-limit, limit), ax.set_yticks([])
+	rect = fig.patch
+	rect.set_facecolor('white')
 
-		def update(frame_number):
+	currentPositions = positions[0]
 
-		    num = frame_number*5
+	colors = []
+	cmap = plt.cm.get_cmap('hsv', numClasses + 1)
 
-		    currentPositions = positions[num]
+	for ind in range(numClasses):
+		colors.append(cmap(ind))
 
-		    scat.set_offsets(currentPositions)
+
+	coloredLabels = [colors[classes.index(label)] for label in labels]
+
+	scat = ax.scatter(currentPositions[:, 0], currentPositions[:, 1],20, coloredLabels)
+
+	def update(frame_number):
+
+	    num = frame_number*5
+
+	    currentPositions = positions[num]
+
+	    scat.set_offsets(currentPositions)
 
 
-		# Construct the animation, using the update function as the animation
-		# director.
+	numFrames = len(positions)/5
 
-		numFrames = len(positions)/5
-
-		animation = FuncAnimation(fig, update, interval=100, frames = numFrames, repeat = False)
-		plt.show()
-		animation.save('movie.mp4')
+	animation = FuncAnimation(fig, update, interval=100, frames = numFrames, repeat = False)
+	plt.show()
+	animation.save('movie.mp4')
 
 
 
@@ -248,8 +298,9 @@ def test():
 
 	positions = computeMapPoints(P, iterations)
 
-	showPoints(positions, labels)
+	showPoints(positions[-1], labels)
 
+	showMovie(positions, labels)
 
 
 

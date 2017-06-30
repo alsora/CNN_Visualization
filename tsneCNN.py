@@ -28,8 +28,8 @@ def main(argv):
     pycaffe_path = os.path.dirname(caffe.__file__)
     caffe_path = os.path.normpath(os.path.join(pycaffe_path, '../../'))
     mean_path = os.path.join(pycaffe_path,'imagenet/ilsvrc_2012_mean.npy')
-    synsets_path = os.path.join(caffe_path,'data/ilsvrc12/synsets.txt')
-
+    synsetsNum_path = os.path.join(caffe_path,'data/ilsvrc12/synsets.txt')
+    synsetsWords_path = os.path.join(os.getcwd(),'synset_words.txt')
 
 
     model_filename = os.path.join(caffe_path, 'models/bvlc_reference_caffenet/deploy.prototxt')
@@ -67,7 +67,8 @@ def main(argv):
 
 
     extractionLayerName = netLayers[cnn_type]
-    synset_words = np.loadtxt(synsets_path, str, delimiter='\t')
+    synsets_num = np.loadtxt(synsetsNum_path, str, delimiter='\t')
+    synset_words = np.loadtxt(synsetsWords_path, str, delimiter='\t')
 
     net = caffe.Net(model_filename,      # defines the structure of the model
                     weight_filename,  # contains the trained weights
@@ -87,13 +88,15 @@ def main(argv):
     names, images, labels = loadImageNetFiles(images_dir, numberImagesPerClass, classes)
     #Preprocess images
 
-    images = CNN.preprocessImages(images, net, mean_path)
+    preprocessedImages = CNN.preprocessImages(images, net, mean_path)
 
-    #Forward pass to extract features	
+    #Forward pass to extract features and predict labels	
 
-    features, predictedLabels = CNN.getFeaturesAndLables(images, net, extractionLayerName)
+    features, predictedLabels = CNN.getFeaturesAndLables(preprocessedImages, net, extractionLayerName)
 
-    predictedLabels = CNN.outputToSynsets(predictedLabels, synset_words)
+    predictedLabels = CNN.outputToSynsets(predictedLabels, synsets_num)
+
+    predictedLabelsTop1 = [predictions[0] for predictions in predictedLabels]
 
     CNN.getPrecision(labels, predictedLabels)
 
@@ -108,25 +111,13 @@ def main(argv):
     P = tsne.computeProbabilities(features, perplexity, tolerance)
     positions = tsne.computeMapPoints(P, iterations)
 
-    #map labels to something more meaningful
+    mappedLabels = CNN.synsetsToWords(labels, synset_words)
+    mappedPredictedLabels = CNN.synsetsToWords(predictedLabelsTop1, synset_words)
 
-    classes = set(labels)  #get unique values
+    tsne.showPoints(positions[-1], mappedLabels)
+    tsne.showPoints(positions[-1], mappedPredictedLabels)
 
-    classesToNumbers = dict()
-
-    for index, item in enumerate(classes):
-        classesToNumbers[item] = index
-
-    mappedLabels = [classesToNumbers.get(key) for key in labels]
-    mappedPredictedLabels = [classesToNumbers.setdefault(key, len(classes) + 1) for key in predictedLabels]
-
-    tsne.showPoints(positions, mappedLabels, True)
-    tsne.showPoints(positions, mappedPredictedLabels, False)
-
-
-
-
-
+    tsne.showMovie(positions, mappedLabels)
 
 
 
