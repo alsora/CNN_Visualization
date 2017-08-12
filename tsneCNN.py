@@ -1,19 +1,15 @@
 import os
-os.environ['GLOG_minloglevel'] = '3'
-
 import caffe
-import numpy as np
-import matplotlib.pyplot as plt
 import sys
 import argparse
-from sklearn.metrics import confusion_matrix
+import numpy as np
+
+import tsne
+import caffeCNN_utils as CNN
 
 from dataset_utils import loadImageNetFiles
 
-import tsne
-
-import caffeCNN_utils as CNN
-
+os.environ['GLOG_minloglevel'] = '3'
 
 netLayers = {
     'caffenet': 'fc7',
@@ -27,10 +23,9 @@ def main(argv):
 
     pycaffe_path = os.path.dirname(caffe.__file__)
     caffe_path = os.path.normpath(os.path.join(pycaffe_path, '../../'))
-    mean_path = os.path.join(pycaffe_path,'imagenet/ilsvrc_2012_mean.npy')
-    synsetsNum_path = os.path.join(caffe_path,'data/ilsvrc12/synsets.txt')
-    synsetsWords_path = os.path.join(os.getcwd(),'synset_words.txt')
-
+    mean_path = os.path.join(pycaffe_path, 'imagenet/ilsvrc_2012_mean.npy')
+    synsetsNum_path = os.path.join(caffe_path, 'data/ilsvrc12/synsets.txt')
+    synsetsWords_path = os.path.join(os.getcwd(), 'synset_words.txt')
 
     model_filename = os.path.join(caffe_path, 'models/bvlc_reference_caffenet/deploy.prototxt')
     weight_filename = os.path.join(caffe_path, 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel')
@@ -58,13 +53,11 @@ def main(argv):
         caffe.set_mode_gpu()
         caffe.set_device(0)
 
-
     if os.path.isfile(model_filename):
         print 'Caffe model found.'
     else:
         print 'Caffe model NOT found...'
         sys.exit(2)
-
 
     extractionLayerName = netLayers[cnn_type]
     synsets_num = np.loadtxt(synsetsNum_path, str, delimiter='\t')
@@ -74,24 +67,19 @@ def main(argv):
                     weight_filename,  # contains the trained weights
                     caffe.TEST)     # use test mode (e.g., don't perform dropout)
 
-
-    net.blobs['data'].reshape(1,3,227,227)
-
-
+    net.blobs['data'].reshape(1, 3, 227, 227)
 
     #Create Images and labels
     numberImagesPerClass = 50
 
     classes = ['n02119789', 'n03773504', 'n04254680', 'n04429376', 'n04507155']
     #If you don't provide synsets, it will take images from all the sub-folders in images_dir
-    
-    names, images, labels = loadImageNetFiles(images_dir, numberImagesPerClass, classes)
-    #Preprocess images
+    names, images, labels = loadImageNetFiles(images_dir, numberImagesPerClass)#, classes)
 
+    #Preprocess images
     preprocessedImages = CNN.preprocessImages(images, net, mean_path)
 
-    #Forward pass to extract features and predict labels	
-
+    #Forward pass to extract features and predict labels
     features, predictedLabels = CNN.getFeaturesAndLables(preprocessedImages, net, extractionLayerName)
 
     predictedLabels = CNN.outputToSynsets(predictedLabels, synsets_num)
@@ -120,8 +108,6 @@ def main(argv):
     tsne.showMovie(positions, mappedLabels)
 
     tsne.imagesPlot(images, positions[-1])
-
-
 
 
 if __name__=='__main__':

@@ -2,3 +2,6 @@ Images
 Networks
 *.pyc
 mnist*
+.*
+image_dir
+

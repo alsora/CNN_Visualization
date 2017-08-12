@@ -59,11 +59,7 @@ def readLabelFromAnnotation(annotationFileName, interesting_labels):
             return 'unknown'
 
 
-
-
-
-
-def loadImageNetFiles(folder, numImages = 100, classes = []):
+def loadImageNetFiles(folder, numImages = 100, classes=None):
 
     samplesNames = []
     samplesImages = []
@@ -76,9 +72,7 @@ def loadImageNetFiles(folder, numImages = 100, classes = []):
         if classes and label not in classes:
             continue
 
-        count = 0
-
-        for image_name in files:
+        for count, image_name in enumerate(files):
 
             if count == numImages:
                 break
@@ -95,7 +89,6 @@ def loadImageNetFiles(folder, numImages = 100, classes = []):
 
             samplesLabels.append(label)
 
-            count += 1
 
     return [samplesNames, samplesImages, samplesLabels]
 

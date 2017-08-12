@@ -1,8 +1,12 @@
 import caffe
 import os
 import numpy as np
-from sklearn.metrics import confusion_matrix
 import sys
+import itertools
+
+import matplotlib.pyplot as plt
+
+from sklearn.metrics import confusion_matrix
 
 
 os.environ['GLOG_minloglevel'] = '3'
@@ -13,13 +17,13 @@ def backspace(n):
     sys.stdout.flush()
 
 
-def preprocessImages(imageSet, net, meanPath = '', imageScale = 255.0):
+def preprocessImages(imageSet, net, meanPath='', imageScale = 255.0):
 
     transformedImages = []
 
     transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-    transformer.set_transpose('data', (2,0,1)) #move image channels to outermost dimension 
-    transformer.set_channel_swap('data', (2,1,0)) # if using RGB instead of BGR
+    transformer.set_transpose('data', (2, 0, 1)) #move image channels to outermost dimension
+    transformer.set_channel_swap('data', (2, 1, 0)) # if using RGB instead of BGR
     transformer.set_raw_scale('data', imageScale)
     if meanPath is not '':
         transformer.set_mean('data', np.load(meanPath).mean(1).mean(1))
@@ -27,10 +31,8 @@ def preprocessImages(imageSet, net, meanPath = '', imageScale = 255.0):
     for image in imageSet:
         transformedImages.append(transformer.preprocess('data', image))
 
-
     return transformedImages
     
-
 
 def extractFeatures(imageSet, net, extractionLayerName):
 
@@ -75,8 +77,6 @@ def predictLabels(imageSet, net):
     return labelsVector
 
 
-
-
 def getFeaturesAndLables(imageSet, net, extractionLayerName):
 
     featuresVector = []
@@ -94,15 +94,13 @@ def getFeaturesAndLables(imageSet, net, extractionLayerName):
         featuresVector.append(features.copy().flatten())
         #labelsVector.append(plabel)
         labelsVector.append(best_n.copy())
-    
 
-        string_to_print = '{} of {}'.format(num + 1, totalImages)
+        string_to_print = 'Images processed: {} of {}'.format(num + 1, totalImages)
         backspace(string_to_print)
 
     print '\n'
 
     return featuresVector, labelsVector
-
 
 
 def getPrecision(trueLabels, predictedLabels):
@@ -136,7 +134,6 @@ def getPrecision(trueLabels, predictedLabels):
     return percentage1
 
 
-
 def plot_confusion_matrix(truePredicted, inlierPredicted, classes,
                           title='Confusion matrix'):
     """
@@ -163,7 +160,6 @@ def plot_confusion_matrix(truePredicted, inlierPredicted, classes,
                  horizontalalignment="center",
                  color="white" if cm[i, j] > thresh else "black")
 
-
     plt.tight_layout()
     plt.ylabel('True labels')
     plt.xlabel('Predicted labels')
@@ -183,7 +179,6 @@ def outputToSynsets(output, word_synsets):
     return synsets
 
 
-
 def synsetsToWords(synsets, synset_words):
 
     newLabels = []
@@ -197,6 +192,5 @@ def synsetsToWords(synsets, synset_words):
         description = fullDescription.split(',')[0]
 
         newLabels.append(description)
-
 
     return newLabels

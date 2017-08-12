@@ -1,4 +1,3 @@
-
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -9,332 +8,285 @@ from skimage.transform import resize
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 
+def binarySearch(comparisonMethod, terms, tolerance=1e-5, objective=30.0):
+    valuemin = 0.1
 
+    valuemax = 10000
 
-def binarySearch(comparisonMethod, terms, tolerance = 1e-5, objective = 30.0):
+    value = (valuemin + valuemax) / 2.0
 
-	valuemin = 0.1
+    PP = comparisonMethod(terms, value)
 
-	valuemax =  10000
+    Pdiff = PP - objective
+    tries = 0
 
-	value = (valuemin + valuemax)/2.0
+    while tries < 50 and np.abs(Pdiff) > tolerance:
+        # If not, increase or decrease precision
+        if Pdiff < 0:
+            valuemin = value
+        else:
+            valuemax = value
 
+        value = (valuemin + valuemax) / 2.0
 
-	PP = comparisonMethod(terms, value)
+        # Recompute the values
+        PP = comparisonMethod(terms, value)
 
-	Pdiff = PP - objective
-	tries = 0
+        Pdiff = PP - objective
+        tries = tries + 1
 
-	while tries < 50 and np.abs(Pdiff) > tolerance:
-		# If not, increase or decrease precision
-		if Pdiff < 0:
-			valuemin = value
-		else:
-			valuemax = value
+    return value
 
-		value = (valuemin + valuemax)/2.0
 
-		# Recompute the values
-		PP = comparisonMethod(terms, value)
+def computeRowP(D=np.array([]), sigma=1.0):
+    precision = 1.0 / sigma
 
-		Pdiff = PP - objective
-		tries = tries + 1
+    P = np.exp(-D * precision)
+    P = P / sum(P)
 
+    return P
 
 
-	return value
+def computePerplexity(D=np.array([]), sigma=1.0):
+    """Compute the perplexity and the P-row for a specific value of the precision of a Gaussian distribution."""
 
+    # Compute P-row and corresponding perplexity
+    precision = 1.0 / sigma
 
-def computeRowP(D = np.array([]), sigma = 1.0):
-	precision = 1.0/sigma
+    P = np.exp(-D * precision)
+    P = P / sum(P)
 
-	P = np.exp(-D * precision)
-	P = P / sum(P)
+    log2P = np.log2(P)
+    Plog2P = P * log2P
+    H = - sum(Plog2P)
 
-	return P
+    PP = 2 ** H
 
+    return PP
 
 
-def computePerplexity(D = np.array([]), sigma = 1.0):
-	"""Compute the perplexity and the P-row for a specific value of the precision of a Gaussian distribution."""
+def computeMapPoints(P, max_iter=200, no_dims=2):
+    n = P.shape[0]
+    initial_momentum = 0.5
+    final_momentum = 0.8
+    eta = 100
+    min_gain = 0.01
+    Y = np.random.normal(0, 1e-4, (n, no_dims))
+    grad = np.zeros((n, no_dims))
+    update = np.zeros((n, no_dims))
+    gains = np.ones((n, no_dims))
 
-	# Compute P-row and corresponding perplexity
-	precision = 1.0/sigma
+    mapPointsStorage = []
 
-	P = np.exp(-D * precision)
-	P = P / sum(P)
-	
-	log2P = np.log2(P)
-	Plog2P = P*log2P
-	H = - sum(Plog2P)
-	
-	PP = 2**H	
+    P = P + np.transpose(P)
+    P = P / np.sum(P)
+    P = P * 4  # early exaggeration
+    P = np.maximum(P, 1e-12)
 
-	return PP
+    # Run iterations
+    for iter in range(max_iter):
 
+        mapPointsStorage.append(Y)
 
+        # Compute pairwise affinities
 
-def computeMapPoints(P, max_iter = 200, no_dims = 2):
-	n = P.shape[0]
-	initial_momentum = 0.5
-	final_momentum = 0.8
-	eta = 100
-	min_gain = 0.01
-	Y = np.random.normal(0, 1e-4, (n, no_dims))
-	grad = np.zeros((n, no_dims))
-	update = np.zeros((n, no_dims))
-	gains = np.ones((n, no_dims))
 
-	mapPointsStorage = []
+        D = pairwise_distances(Y, squared=True)
 
-	P = P + np.transpose(P)
-	P = P / np.sum(P)
-	P = P * 4							# early exaggeration
-	P = np.maximum(P, 1e-12)
+        num = 1 / (1 + D)
 
+        num[range(n), range(n)] = 0
+        Q = num / np.sum(num)
+        Q = np.maximum(Q, 1e-12)
 
-	# Run iterations
-	for iter in range(max_iter):
+        # Compute gradient
+        PQ = P - Q
 
-		mapPointsStorage.append(Y)
+        for i in range(n):
+            grad[i, :] = np.sum(np.tile(PQ[:, i] * num[:, i], (no_dims, 1)).T * (Y[i, :] - Y), 0)
 
-		# Compute pairwise affinities
-		
+        # Perform the update
+        if iter < 250:
+            momentum = initial_momentum
+        else:
+            momentum = final_momentum
 
-		D = pairwise_distances(Y, squared=True)
+        toBeIncreased = update * grad < 0
+        toBeDecreased = update * grad >= 0
+        gains[toBeIncreased] += 0.2
+        gains[toBeDecreased] *= 0.8
 
-		num = 1/(1 + D)
+        gains[gains < min_gain] = min_gain
 
-		num[range(n), range(n)] = 0
-		Q = num / np.sum(num)
-		Q = np.maximum(Q, 1e-12)
+        learningRate = eta * gains
 
-		# Compute gradient
-		PQ = P - Q
+        update = momentum * update - learningRate * grad
 
-		for i in range(n):
-			grad[i,:] = np.sum(np.tile(PQ[:,i] * num[:,i], (no_dims, 1)).T * (Y[i,:] - Y), 0)
+        Y = Y + update
+        Y = Y - np.tile(np.mean(Y, 0), (n, 1))
 
-		# Perform the update
-		if iter < 250:
-			momentum = initial_momentum
-		else:
-			momentum = final_momentum
+        # Compute current value of cost function
+        if (iter + 1) % 10 == 0:
+            C = np.sum(P * np.log(P / Q))
+            print "Iteration ", (iter + 1), ": error is ", C
 
-		
-		toBeIncreased = update*grad < 0
-		toBeDecreased = update*grad >= 0
-		gains[toBeIncreased] += 0.2	
-		gains[toBeDecreased] *= 0.8
+        # Stop early exaggeration
+        if iter == 100:
+            P = P / 4
 
+    mapPointsStorage.append(Y)
+    return mapPointsStorage
 
-		gains[gains < min_gain] = min_gain
 
-		learningRate = eta*gains
+def computeProbabilities(X, perplexity=30.0, tolerance=1e-5):
+    pca = PCA(n_components=50)
 
+    X = pca.fit_transform(X)
 
-		update = momentum * update - learningRate * grad
+    numSamples = X.shape[0]
 
-		Y = Y + update
-		Y = Y - np.tile(np.mean(Y, 0), (n, 1))
+    P = np.zeros((numSamples, numSamples))
 
-		# Compute current value of cost function
-		if (iter + 1) % 10 == 0:
-			C = np.sum(P * np.log(P / Q))
-			print "Iteration ", (iter + 1), ": error is ", C
+    D = pairwise_distances(X, squared=True)
 
-		# Stop early exaggeration
-		if iter == 100:
-			P = P / 4
+    for i in range(numSamples):
+        indices = np.concatenate((np.arange(i), np.arange(i + 1, numSamples)))
 
+        distancesFromI = D[i, indices]
 
-	mapPointsStorage.append(Y)
-	return mapPointsStorage
+        sigma = binarySearch(computePerplexity, distancesFromI, tolerance, perplexity)
 
+        Prow = computeRowP(distancesFromI, sigma)
 
-def computeProbabilities(X, perplexity = 30.0, tolerance = 1e-5):
+        P[i, :] = np.concatenate((Prow[0:i], [0.0], Prow[i:numSamples]))
 
-	pca = PCA(n_components=50) 
-
-	X = pca.fit_transform(X)
-
-	numSamples = X.shape[0]
-
-	P = np.zeros((numSamples, numSamples))
-
-	D = pairwise_distances(X, squared=True)
-
-	for i in range(numSamples):
-
-
-
-		indices = np.concatenate((np.arange(i), np.arange(i+1,numSamples)))
-
-		distancesFromI = D[i,indices]
-
-		sigma = binarySearch(computePerplexity, distancesFromI, tolerance, perplexity)
-
-		Prow = computeRowP(distancesFromI, sigma)
-
-		P[i,:] = np.concatenate((Prow[0:i],[0.0],Prow[i:numSamples]))
-
-
-
-	return P
-
-
-
-
+    return P
 
 
 def showPoints(position, labels):
+    classes = list(set(labels))
 
-	classes = list(set(labels))
+    numClasses = len(classes)
 
-	numClasses = len(classes)
+    perClassPositions_t = [[] for x in range(numClasses)]
 
+    for ind, point in enumerate(position):
+        subListID = classes.index(labels[ind])
 
-	perClassPositions_t = [[] for x in range(numClasses)]
+        perClassPositions_t[subListID].append(point)
 
-	for ind, point in enumerate(position):
+    finalData = perClassPositions_t
+    plotStorage = []
+    colors = []
 
-		subListID = classes.index(labels[ind])
+    cmap = plt.cm.get_cmap('hsv', numClasses + 1)
 
-		perClassPositions_t[subListID].append(point)
+    for index, lab in enumerate(finalData):
+        lab = np.asarray(lab)
 
+        x = plt.scatter(lab[:, 0], lab[:, 1], 20, c=cmap(index))
 
-	finalData = perClassPositions_t
-	plotStorage = []
-	colors = []
+        plotStorage.append(x)
+        colors.append(cmap(index))
 
-	cmap = plt.cm.get_cmap('hsv', numClasses + 1)
+    plt.legend(plotStorage,
+               classes,
+               scatterpoints=1,
+               loc='lower left',
+               ncol=3,
+               fontsize=8)
 
-	for index, lab in enumerate(finalData):
-	
-		lab = np.asarray(lab)		
-
-		x = plt.scatter(lab[:,0], lab[:,1], 20, c = cmap(index))
-
-
-		plotStorage.append(x)
-		colors.append(cmap(index))
-
-	plt.legend(plotStorage,
-           classes,
-           scatterpoints=1,
-           loc='lower left',
-           ncol=3,
-           fontsize=8)
-
-	plt.show();
-
-
-
+    plt.show()
 
 
 def showMovie(positions, labels):
+    positions = np.asarray(positions)
 
-	positions = np.asarray(positions)
+    classes = list(set(labels))
 
-	classes = list(set(labels))
+    numClasses = len(classes)
 
-	numClasses = len(classes)
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_axes([0, 0, 1, 1], frameon=False)
 
-	fig = plt.figure(figsize=(10, 10))
-	ax = fig.add_axes([0, 0, 1, 1], frameon=False)
+    maxX = np.amax(positions[:, :, 0])
+    minX = np.amin(positions[:, :, 0])
+    maxY = np.amax(positions[:, :, 1])
+    minY = np.amin(positions[:, :, 1])
 
-	maxX = np.amax(positions[:,:,0])
-	minX = np.amin(positions[:,:,0])
-	maxY = np.amax(positions[:,:,1])
-	minY = np.amin(positions[:,:,1])
+    limit = max(maxX, maxY, minX, minY, key=abs) * 1.2
 
-	limit = max(maxX, maxY, minX, minY, key=abs) * 1.2
+    ax.set_xlim(-limit, limit), ax.set_xticks([])
+    ax.set_ylim(-limit, limit), ax.set_yticks([])
+    rect = fig.patch
+    rect.set_facecolor('white')
 
-	ax.set_xlim(-limit, limit), ax.set_xticks([])
-	ax.set_ylim(-limit, limit), ax.set_yticks([])
-	rect = fig.patch
-	rect.set_facecolor('white')
+    currentPositions = positions[0]
 
-	currentPositions = positions[0]
+    colors = []
+    cmap = plt.cm.get_cmap('hsv', numClasses + 1)
 
-	colors = []
-	cmap = plt.cm.get_cmap('hsv', numClasses + 1)
+    for ind in range(numClasses):
+        colors.append(cmap(ind))
 
-	for ind in range(numClasses):
-		colors.append(cmap(ind))
+    coloredLabels = [colors[classes.index(label)] for label in labels]
 
+    scat = ax.scatter(currentPositions[:, 0], currentPositions[:, 1], 20, coloredLabels)
 
-	coloredLabels = [colors[classes.index(label)] for label in labels]
+    def update(frame_number):
+        num = frame_number * 5
 
-	scat = ax.scatter(currentPositions[:, 0], currentPositions[:, 1],20, coloredLabels)
+        currentPositions = positions[num]
 
-	def update(frame_number):
+        scat.set_offsets(currentPositions)
 
-	    num = frame_number*5
+    numFrames = len(positions) / 5
 
-	    currentPositions = positions[num]
-
-	    scat.set_offsets(currentPositions)
-
-
-	numFrames = len(positions)/5
-
-	animation = FuncAnimation(fig, update, interval=100, frames = numFrames, repeat = False)
-	plt.show()
-	animation.save('movie.mp4')
+    animation = FuncAnimation(fig, update, interval=100, frames=numFrames, repeat=False)
+    plt.show()
+    animation.save('movie.mp4')
 
 
+def imagesPlot(images, positions, zoom=0.25):
+    fig, ax = plt.subplots()
 
+    for num in range(len(images)):
 
-def imagesPlot(images, positions, zoom = 0.25):
+        x = positions[num, 0]
+        y = positions[num, 1]
+        image = images[num]
 
-	fig, ax = plt.subplots()
+        im = OffsetImage(image, zoom=zoom)
+        x, y = np.atleast_1d(x, y)
 
+        for x0, y0 in zip(x, y):
+            ab = AnnotationBbox(im, (x0, y0), xycoords='data', frameon=False)
+            ax.add_artist(ab)
 
-	for num in range (len(images)):
+        ax.update_datalim(np.column_stack([x, y]))
+        ax.autoscale()
 
-		x = positions[num, 0]
-		y = positions[num, 1]
-		image = images[num]
-
-		im = OffsetImage(image, zoom=zoom)
-		x,y = np.atleast_1d(x,y)
-
-		for x0,y0 in zip(x,y):
-			ab = AnnotationBbox(im, (x0, y0), xycoords='data', frameon=False)
-			ax.add_artist(ab)
-
-		ax.update_datalim(np.column_stack([x, y]))
-		ax.autoscale()
-    
-	plt.show()
-
+    plt.show()
 
 
 def test():
-	X = np.loadtxt("mnist2500_X.txt")
-	labels = np.loadtxt("mnist2500_labels.txt")
+    X = np.loadtxt("mnist2500_X.txt")
+    labels = np.loadtxt("mnist2500_labels.txt")
 
-	perplexity = 20.0
-	tolerance = 1e-5
+    perplexity = 20.0
+    tolerance = 1e-5
 
-	iterations = 800
-	
-	P = computeProbabilities(X, perplexity, tolerance)
+    iterations = 800
 
-	positions = computeMapPoints(P, iterations)
+    P = computeProbabilities(X, perplexity, tolerance)
 
-	showPoints(positions[-1], labels)
+    positions = computeMapPoints(P, iterations)
 
-	showMovie(positions, labels)
+    showPoints(positions[-1], labels)
 
+    showMovie(positions, labels)
 
 
 if __name__ == "__main__":
-	print 'Running t-sne test example'
-	test()
-	
-
-
-
-
+    print 'Running t-sne test example'
+    test()
