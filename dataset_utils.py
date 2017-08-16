@@ -61,9 +61,9 @@ def readLabelFromAnnotation(annotationFileName, interesting_labels):
 
 def loadImageNetFiles(folder, numImages = 100, classes=None):
 
-    samplesNames = []
-    samplesImages = []
-    samplesLabels = []
+    samples_names = []
+    samples_images = []
+    samples_labels = []
 
     for root, dirs, files in walk(folder):
         
@@ -79,18 +79,14 @@ def loadImageNetFiles(folder, numImages = 100, classes=None):
 
             name, extension = image_name.split(".")
 
-            samplesNames.append(name)
+            samples_names.append(name)
 
-            imageCompletePath = os.path.join(root, image_name)
+            image_complete_path = os.path.join(root, image_name)
+            image = caffe.io.load_image(image_complete_path)
+            samples_images.append(image)
+            samples_labels.append(label)            
 
-            image = caffe.io.load_image(imageCompletePath)
-            
-            samplesImages.append(image)
-
-            samplesLabels.append(label)
-
-
-    return [samplesNames, samplesImages, samplesLabels]
+    return [samples_names, samples_images, samples_labels]
 
 
 

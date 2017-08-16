@@ -77,6 +77,30 @@ def predictLabels(imageSet, net):
     return labelsVector
 
 
+def batch_iterator(images, batch_size):
+    batch = []
+    for idx, image in enumerate(images):
+        batch.append(image)
+
+        idx+=1
+
+        if idx % batch_size == 0 and idx != 0:
+            yield batch
+            batch = []
+
+def occlusion_features_and_labels(batch, net, extraction_layer_name):
+
+    batch_probabilities = []
+    for img in batch:
+        net.blobs['data'].data[...] = img
+        batch_output = net.forward()
+
+        #batch_features = net.blobs[extraction_layer_name].data
+        #batch_labels = batch_output['prob']
+        batch_probabilities.append(batch_output['prob'][0])
+        
+    return batch_probabilities
+
 def getFeaturesAndLables(imageSet, net, extractionLayerName):
 
     featuresVector = []
@@ -90,7 +114,6 @@ def getFeaturesAndLables(imageSet, net, extractionLayerName):
         features = net.blobs[extractionLayerName].data[0]
         #plabel = int(output['prob'].argmax())
         best_n = net.blobs['prob'].data[0].flatten().argsort()[-1:-5:-1]
-        
         featuresVector.append(features.copy().flatten())
         #labelsVector.append(plabel)
         labelsVector.append(best_n.copy())

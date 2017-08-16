@@ -3,5 +3,7 @@ Networks
 *.pyc
 mnist*
 .*
+!/.gitignore
 image_dir
+images_dir
 
