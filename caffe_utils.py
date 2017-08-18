@@ -68,25 +68,37 @@ class CaffeNet():
 
         return transformed_images
 
-    def extract_features(self, imageSet, extractionLayerName):
+    def extract_features(self, imageSet, extraction_layer, most_active_filter=None):
 
-        featuresVector = []
-        totalImages = len(imageSet)
+        features_vector = []
+        
         for num, image in enumerate(imageSet):
 
             self.net.blobs['data'].data[...] = image
             self.net.forward()
             
-            features = self.net.blobs[extractionLayerName].data[0]
-            
-            featuresVector.append(features.copy().flatten())
-            
-            string_to_print = '{} of {}'.format(num + 1, totalImages)
-            backspace(string_to_print)
+            features = self.net.blobs[extraction_layer].data[0]
+            if most_active_filter is int:
+                features_vector.append(features[most_active_filter].copy())
+            else:
+                features_vector.append(features.copy())
 
-        print '\n'
+        return features_vector
 
-        return featuresVector
+    @staticmethod
+    def get_most_active_filters(images_features, n=10):
+
+        best_filters = []
+
+        for filters in images_features:
+
+            mean_filters = [np.mean(filter_) for filter_ in filters]
+
+            # reversing the order
+            filters_sorted = np.argsort(mean_filters)[::-1]
+            best_filters.append(filters_sorted[:n])
+
+        return best_filters
 
     def get_probs(self, batch):
 
