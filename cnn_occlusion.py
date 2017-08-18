@@ -11,6 +11,7 @@ import caffe_utils
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 from matplotlib.colors import Normalize
 from matplotlib import cm
@@ -151,64 +152,96 @@ def main():
     most_active_filter = net.get_most_active_filters(img_features)[0][0]
 
     images_features = []
-    probs = []
     label_probabilities = []
     predicted_idxs = []
     all_positions = []
+    true_label_idx = synset_to_idx[label]
 
     # the mask is applied before the image preprocessing
-    for masked_images, positions in apply_mask_iterator(img, mask_size=100, stride=1, batch_size=batch_size):
+    stride = 150
+
+    iterator_ = apply_mask_iterator(img, mask_size=200, stride=stride, batch_size=batch_size)
+
+    for masked_images, positions in iterator_:
 
         num_of_images = len(masked_images)
         all_positions.extend(positions)
-
         preprocessed_images = net.preprocess_images(masked_images)
+
         images_features.extend(net.extract_features(preprocessed_images, extraction_layer, most_active_filter))
         
-        probs.extend(net.get_probs(preprocessed_images))
+        probs = net.get_probs(preprocessed_images)
+        label_probabilities.extend([x[true_label_idx] for x in probs])
         
-        true_label_idx = synset_to_idx[label]
-        label_probabilities.extend([x[true_label_idx] for x in probs[-num_of_images:]])
-
-        best_labels_idxs = [np.argsort(x)[-1] for x in probs[-num_of_images:]]
-
+        best_labels_idxs = [np.argsort(x)[-1] for x in probs]
         predicted_idxs.extend(best_labels_idxs)
-
-        to_print = '{0} of {1}'.format(len(images_features), img.shape[0]*img.shape[1])
+        to_print = '{} of {}'.format(len(images_features), int(img.shape[0]*img.shape[1]/float(stride*stride)))
+        
         backspace(to_print)
 
 
     # heat_map of probability of the true class
-    heat_map_size = img.shape[0]
+    heat_map_size = img.shape[:2]
 
-    heat_map_probs = np.zeros((heat_map_size, heat_map_size))
-    heat_map_features = np.zeros((heat_map_size, heat_map_size))
-    heat_map_labels = np.zeros((heat_map_size, heat_map_size))
-    heat_map_num= np.zeros((heat_map_size, heat_map_size))
+    # initializing heatmaps
+    heat_map_probs = np.zeros(heat_map_size)
+    heat_map_features = np.zeros(heat_map_size)
+    heat_map_labels = np.zeros(heat_map_size)
+    heat_map_num = np.zeros(heat_map_size)
 
-    cmap_labels = cm.autumn
+    # filling heatmaps
+    for [x, y], prob, feature, predicted_idx in zip(all_positions, label_probabilities, images_features, predicted_idxs):
+        heat_map_probs[x, y] = prob
+        heat_map_features[x, y] = np.mean(feature)
+        heat_map_labels[x, y] = predicted_idx
+        heat_map_num[x, y] = 1
+
+    # deleting empty rows and columns
+    heat_map_probs = np.nan_to_num(np.divide(heat_map_probs, heat_map_num))
+    means_0 = np.mean(heat_map_num, axis=1)
+    heat_map_num = np.delete(heat_map_num, np.where(means_0 == 0)[0], axis=0)
+    means_1 = np.mean(heat_map_num, axis=0)
+    heat_map_num = np.delete(heat_map_num, np.where(means_1 == 0)[0], axis=1)
+    
+    heat_map_probs = np.delete(heat_map_probs, np.where(means_0 == 0)[0], axis=0)
+    heat_map_probs = np.delete(heat_map_probs, np.where(means_1 == 0)[0], axis=1)
+
+    heat_map_features = np.delete(heat_map_features, np.where(means_0 == 0)[0], axis=0)
+    heat_map_features = np.delete(heat_map_features, np.where(means_1 == 0)[0], axis=1)
+    heat_map_features = heat_map_features/np.max(heat_map_features)
+
+    heat_map_labels = np.delete(heat_map_labels, np.where(means_0 == 0)[0], axis=0)
+    heat_map_labels = np.delete(heat_map_labels, np.where(means_1 == 0)[0], axis=1)
+
+    # plotting
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+    ax1.imshow(img)
+    ax1.set_title('Original image')
+
+    cmap = plt.get_cmap('YlOrRd')
+    img = ax2.imshow(heat_map_probs, cmap=cmap, vmin=0, vmax=1, interpolation='none')
+    ax2.axis('off')
+    ax2.set_title('Classifier, probability of correct class')
+    plt.colorbar(img, ax=ax2, fraction=0.046, pad=0.04)
+
+    img = ax3.imshow(heat_map_features, cmap=cmap, interpolation='none')
+    ax3.axis('off')
+    ax3.set_title('Strongest feature map')
+    plt.colorbar(img, ax=ax3, fraction=0.046, pad=0.04)
+
     norm = Normalize(vmin=0, vmax=len(idx_to_synset))
-
-    for [x, y], prob, feature, predicted_idx in zip(positions, label_probabilities, images_features, predicted_idxs):
-        
-        heat_map_probs[x, y] += prob
-        heat_map_features[x, y] += np.mean(feature)
-        heat_map_labels[x, y] += predicted_idx
-        heat_map_num[x, y] += 1
-
-    # heat_map_probs = np.nan_to_num(np.divide(heat_map_probs, heat_map_num))
-
-    plt.imshow(heat_map_probs, cmap=cm.Blues, interpolation='nearest')
-    plt.colorbar()
-
-    plt.figure()
-    plt.imshow(img)
-
-    plt.figure()
-    plt.imshow(heat_map_features, cmap=cm.Blues)
-
-    plt.figure()
-    plt.imshow(heat_map_labels, cmap=cmap_labels, norm=norm)
+    ax4.imshow(heat_map_labels, cmap=cmap, interpolation='none', norm=norm)
+    ax4.axis('off')
+    ax4.set_title('Classifier, most probable class')
+    labels_set = list(set(heat_map_labels.flatten().tolist()))
+    class_set = [synset_to_class[idx_to_synset[x]].split(',')[0] for x in labels_set]
+    
+    colors = [cmap(norm(x)) for x in labels_set]
+    handles = []
+    for label_id, color in zip(labels_set, colors):
+        handles.append(Rectangle((0,0),1,1, color=list(color[:3])))
+    ax4.legend(handles, class_set, loc="upper right")
+    #f.subplots_adjust(hspace=1.0)
     plt.show()
 
 
