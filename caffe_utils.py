@@ -17,20 +17,27 @@ def backspace(n):
 class CaffeNet():
     """The class initializes a caffenet and brings some usefull methods.
 
-    Parameter
+    Parameters
     ---------
     model_path: the path to the prototxt
     weights_path: the path to the weights
-    mean_path: the path to the mean of the dataset, default=None
-    image_scale: the color scale accepted by the net, default=255.0
-    batch_size: batch size for the forward pass"""
+    mean_path: the path to the mean of the dataset, default: None
+    image_scale: the color scale accepted by the net, default: 255.0
+    batch_size: batch size for the forward pass, default: 1
+    input_shape: (rows, cols) the input shape of the net, default: (227, 227)"""
 
-    def __init__(self, model_path, weights_path, mean_path=None, image_scale=255.0, batch_size=1):
+    def __init__(self, model_path,
+                 weights_path,
+                 mean_path=None,
+                 image_scale=255.0,
+                 batch_size=1,
+                 input_shape=(227, 227)):
+
         self.net = caffe.Net(model_path,      # defines the structure of the model
                         weights_path,  # contains the trained weights
                         caffe.TEST)     # use test mode (e.g., don't perform dropout)
 
-        self.net.blobs['data'].reshape(batch_size, 3, 227, 227)
+        self.net.blobs['data'].reshape(batch_size, 3, input_shape[0], input_shape[1])
         self.net.blobs['prob'].reshape(batch_size, )
 
         self.mean_path = mean_path
@@ -38,7 +45,6 @@ class CaffeNet():
         self.batch_size = batch_size
 
         self.transformer = self.set_transformer()
-
 
     def set_transformer(self):
         transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
@@ -50,7 +56,6 @@ class CaffeNet():
             transformer.set_mean('data', np.load(self.mean_path).mean(1).mean(1))
 
         return transformer
-
 
     def preprocess_images(self, image_set):
         transformed_images = []
@@ -68,11 +73,11 @@ class CaffeNet():
 
         return transformed_images
 
-    def extract_features(self, imageSet, extraction_layer, most_active_filter=None):
+    def get_features(self, batch, extraction_layer, most_active_filter=None):
 
         features_vector = []
         
-        for num, image in enumerate(imageSet):
+        for image in batch:
 
             self.net.blobs['data'].data[...] = image
             self.net.forward()
@@ -86,7 +91,7 @@ class CaffeNet():
         return features_vector
 
     @staticmethod
-    def get_most_active_filters(images_features, n=10):
+    def get_most_active_features(images_features, n=10):
 
         best_filters = []
 
@@ -108,8 +113,27 @@ class CaffeNet():
             batch_output = self.net.forward()
 
             batch_probabilities.append(batch_output['prob'][0])
-            
+
         return batch_probabilities
+
+    def get_probs_and_features(self, batch, extraction_layer, most_active_filter=None):
+
+        batch_probabilities = []
+        features_vector = []
+
+        for img in batch:
+            
+            self.net.blobs['data'].data[...] = img
+            batch_output = self.net.forward()
+            batch_probabilities.append(batch_output['prob'][0].copy())
+            
+            features = self.net.blobs[extraction_layer].data[0]
+            if most_active_filter is int:
+                features_vector.append(features[most_active_filter].copy())
+            else:
+                features_vector.append(features.copy())
+            
+        return batch_probabilities, features_vector
 
     @staticmethod
     def batch_iterator(images, batch_size):
