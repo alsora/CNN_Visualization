@@ -75,7 +75,7 @@ def main():
     pycaffe_path = os.path.dirname(caffe.__file__)
     caffe_path = os.path.normpath(os.path.join(pycaffe_path, '../../'))
     mean_path = os.path.join(pycaffe_path, 'imagenet/ilsvrc_2012_mean.npy')
-    synsets_num_path = os.path.join(caffe_path, 'data/ilsvrc12/synsets.txt')
+    synsets_num_path = os.path.join(os.getcwd, 'synsets.txt')
     synsets_to_class_path = os.path.join(os.getcwd(), 'synset_words.txt')
 
     # building dictionaries and inverse ones
@@ -99,7 +99,7 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-w", "--weights", help="caffemodel file, (default: caffenet).",
+    parser.add_argument("-w", "--weights", help="the model file, (default: caffenet).",
                         default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'))
     parser.add_argument("-p", "--prototxt", help="prototxt file, (default: caffenet).",
                         default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/deploy.prototxt'))
