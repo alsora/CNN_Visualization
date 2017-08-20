@@ -5,7 +5,8 @@ import argparse
 import numpy as np
 
 import tsne
-import caffeCNN_utils as CNN
+#import caffeCNN_utils as CNN
+import caffe_utils
 
 from dataset_utils import loadImageNetFiles
 
@@ -24,13 +25,13 @@ def main(argv):
     pycaffe_path = os.path.dirname(caffe.__file__)
     caffe_path = os.path.normpath(os.path.join(pycaffe_path, '../../'))
     mean_path = os.path.join(pycaffe_path, 'imagenet/ilsvrc_2012_mean.npy')
-    synsetsNum_path = os.path.join(caffe_path, 'data/ilsvrc12/synsets.txt')
-    synsetsWords_path = os.path.join(os.getcwd(), 'synset_words.txt')
+    synsets_num_path = os.path.join(caffe_path, 'data/ilsvrc12/synsets.txt')
+    synsets_to_class_path = os.path.join(os.getcwd(), 'synset_words.txt')
 
     model_filename = os.path.join(caffe_path, 'models/bvlc_reference_caffenet/deploy.prototxt')
     weight_filename = os.path.join(caffe_path, 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel')
     cnn_type = 'caffenet'
-    images_dir = ''
+    images_dir = 'Images'
     caffe.set_mode_cpu()
 
     parser = argparse.ArgumentParser()
@@ -60,14 +61,28 @@ def main(argv):
         sys.exit(2)
 
     extractionLayerName = netLayers[cnn_type]
-    synsets_num = np.loadtxt(synsetsNum_path, str, delimiter='\t')
-    synset_words = np.loadtxt(synsetsWords_path, str, delimiter='\t')
 
-    net = caffe.Net(model_filename,      # defines the structure of the model
-                    weight_filename,  # contains the trained weights
-                    caffe.TEST)     # use test mode (e.g., don't perform dropout)
+    # building dictionaries and inverse ones
+    idx_to_synset = {}
+    synset_to_idx = {}
 
-    net.blobs['data'].reshape(1, 3, 227, 227)
+    with open(synsets_num_path, 'r') as fp:
+        for idx, synset in enumerate(fp):
+            synset = synset.strip()
+            idx_to_synset[idx] = synset
+            synset_to_idx[synset] = idx
+
+    synset_to_class = {}
+    class_to_synset = {}
+
+    with open(synsets_to_class_path, 'r') as fp:
+        for line in fp:
+            [synset, class_] = line.strip().split(' ', 1)
+            synset_to_class[synset] = class_
+            class_to_synset[class_] = synset
+
+ 	#Loading net and utilities    
+    net = caffe_utils.CaffeNet(model_filename, weight_filename, mean_path)
 
     #Create Images and labels
     numberImagesPerClass = 50
@@ -77,19 +92,25 @@ def main(argv):
     names, images, labels = loadImageNetFiles(images_dir, numberImagesPerClass)#, classes)
 
     #Preprocess images
-    preprocessedImages = CNN.preprocessImages(images, net, mean_path)
+    preprocessedImages = net.preprocess_images(images)
 
     #Forward pass to extract features and predict labels
-    features, predictedLabels = CNN.getFeaturesAndLables(preprocessedImages, net, extractionLayerName)
+    probs, features = net.get_probs_and_features(preprocessedImages, extractionLayerName)
 
-    predictedLabels = CNN.outputToSynsets(predictedLabels, synsets_num)
+    predictedProbsTop5 =[np.argsort(x)[-1:-5:-1] for x in probs]
+    
+    predictedLabelsTop5 = []
+    for predictions in predictedProbsTop5:
+    	predictions = [idx_to_synset[x] for x in predictions]
+    	predictedLabelsTop5.append(predictions)
 
-    predictedLabelsTop1 = [predictions[0] for predictions in predictedLabels]
 
-    CNN.getPrecision(labels, predictedLabels)
+    predictedLabelsTop1 = [predictions[0] for predictions in predictedLabelsTop5]
+
+    net.get_precision(labels, predictedLabelsTop5)
 
     #Apply tsne
-
+    
     perplexity = 10.0
     tolerance = 1e-5
     iterations = 800
@@ -99,8 +120,8 @@ def main(argv):
     P = tsne.computeProbabilities(features, perplexity, tolerance)
     positions = tsne.computeMapPoints(P, iterations)
 
-    mappedLabels = CNN.synsetsToWords(labels, synset_words)
-    mappedPredictedLabels = CNN.synsetsToWords(predictedLabelsTop1, synset_words)
+    mappedLabels = net.synsets_to_words([synset_to_class[x] for x in labels])
+    mappedPredictedLabels = net.synsets_to_words([synset_to_class[x] for x in predictedLabelsTop1])
 
     tsne.showPoints(positions[-1], mappedLabels)
     tsne.showPoints(positions[-1], mappedPredictedLabels)
@@ -108,7 +129,7 @@ def main(argv):
     tsne.showMovie(positions, mappedLabels)
 
     tsne.imagesPlot(images, positions[-1])
-
+    
 
 if __name__=='__main__':
     main(sys.argv[1:])
