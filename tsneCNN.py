@@ -1,4 +1,10 @@
 import os
+os.environ['GLOG_minloglevel'] = '3'
+
+import warnings
+warnings.filterwarnings("ignore")
+
+
 import caffe
 import sys
 import argparse
@@ -9,8 +15,6 @@ import tsne
 import caffe_utils
 
 from dataset_utils import loadImageNetFiles
-
-os.environ['GLOG_minloglevel'] = '3'
 
 netLayers = {
     'caffenet': 'fc7',

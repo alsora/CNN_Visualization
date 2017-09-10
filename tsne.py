@@ -1,4 +1,6 @@
 import numpy as np
+import sys
+
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from sklearn.decomposition import PCA
@@ -106,7 +108,7 @@ def computeMapPoints(P, max_iter=200, no_dims=2):
             grad[i, :] = np.sum(np.tile(PQ[:, i] * num[:, i], (no_dims, 1)).T * (Y[i, :] - Y), 0)
 
         # Perform the update
-        if iter < 250:
+        if iter_ < 250:
             momentum = initial_momentum
         else:
             momentum = final_momentum
@@ -124,16 +126,21 @@ def computeMapPoints(P, max_iter=200, no_dims=2):
 
         Y = Y + update
         Y = Y - np.tile(np.mean(Y, 0), (n, 1))
+        
+        def backspace(n):
+            sys.stdout.write('\r'+n)
+            sys.stdout.flush()
 
         # Compute current value of cost function
         if (iter + 1) % 10 == 0:
             C = np.sum(P * np.log(P / Q))
-            print "Iteration ", (iter + 1), ": error is ", C
+            to_print = "Iteration {} : error {}".format(iter_ + 1, C)
+            backspace(to_print)
 
         # Stop early exaggeration
         if iter == 100:
             P = P / 4
-
+    print
     mapPointsStorage.append(Y)
     return mapPointsStorage
 
