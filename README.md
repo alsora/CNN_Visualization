@@ -52,7 +52,7 @@ Suppose the name of one image is *n01440764_18.JPEG*. It's important to don't ch
 
 To test the code:
 
-        $ python cnn_occlusion -i /path/to/n01440764_18.JPEG  
+        $ python cnn_occlusion.py -i /path/to/n01440764_18.JPEG  
         
 ### Parameters:
 
@@ -66,7 +66,7 @@ Parameter | Description
 --gpu, -g INT | GPU number to use (default: -1, aka cpu_mode)
 --batch_size INT| The batch size (default: 1)
 --stride INT | The stride of the applied mask (default: 100)
---mask_size INT | "The length of the side of the square mask (default: 100)
+--mask_size INT | The length of the side of the square mask (default: 100)
 
         
 

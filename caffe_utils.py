@@ -225,14 +225,12 @@ class CaffeNet():
         return synsets
 
     @staticmethod
-    def synsets_to_words(synsets, synset_words):
+    def synsets_to_words(synsets):
         new_labels = []
 
         for synset in synsets:
 
-            index = np.where(synset_words[:,0] == synset)
-            full_description = synset_words[index[0],1][0]
-            description = full_description.split(',')[0]
-            new_labels.append(description)
+            word = synset.split(',')[0]
+            new_labels.append(word)
 
         return new_labels
