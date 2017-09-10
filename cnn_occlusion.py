@@ -115,9 +115,9 @@ def main():
                         help="GPU number, (default: %(default)s aka disabled)")
     parser.add_argument("--batch_size", type=int, default=1, metavar='INT',
                         help="Batch size, (default: %(default)s).")
-    parser.add_argument("--stride", type=check_positive, default=50, metavar='INT',
+    parser.add_argument("--stride", type=check_positive, default=20, metavar='INT',
                         help="The stride of the applied mask, (default: %(default)s).")
-    parser.add_argument("--mask_size", type=check_positive, default=100, metavar='INT',
+    parser.add_argument("--mask_size", type=check_positive, default=50, metavar='INT',
                         help="The length of the side of the square mask, (default: %(default)s).")
     args = parser.parse_args()
 
@@ -154,7 +154,7 @@ def main():
     img_features = net.get_features(preprocessed_img, extraction_layer)
 
     # getting the most active filter index for the image
-    most_active_filter = net.get_most_active_features(img_features)[0][0]
+    most_active_filter = net.get_most_active_filters(img_features)[0][0]
 
     images_features = []
     synset_probabilities = []
@@ -227,6 +227,7 @@ def main():
 
     heat_map_synsets = np.delete(heat_map_synsets, np.where(means_0 == 0)[0], axis=0)
     heat_map_synsets = np.delete(heat_map_synsets, np.where(means_1 == 0)[0], axis=1)
+    heat_map_synsets = np.floor((heat_map_synsets - np.min(heat_map_synsets))/(np.max(heat_map_synsets) - np.min(heat_map_synsets))*999)
 
     # plotting
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
@@ -248,12 +249,13 @@ def main():
 
     norm = Normalize(vmin=0, vmax=len(idx_to_synset))
     
-    cmap = plt.get_cmap('brg')
+    cmap = plt.get_cmap('rainbow')
     ax4.imshow(heat_map_synsets, cmap=cmap, interpolation='none', norm=norm)
     ax4.axis('off')
     ax4.set_title('Classifier, most probable class')
     synsets_set = list(set(heat_map_synsets.flatten().tolist()))
     class_set = [synset_to_class[idx_to_synset[x]].split(',')[0] for x in synsets_set]
+    #synsets_set = [x for x in xrange(0,999,1000/len(synsets_set))]
     colors = [cmap(norm(x)) for x in synsets_set]
     handles = []
     for synset_id, color in zip(synsets_set, colors):
@@ -262,7 +264,7 @@ def main():
     ax4.set_position([box.x0, box.y0 + box.height * 0.1,
                  box.width, box.height * 0.9])
     ax4.legend(handles, class_set, loc='upper center', bbox_to_anchor=(0.5, -0.05),
-          fancybox=True, shadow=True, ncol=len(handles))
+          fancybox=True, shadow=True, ncol=3)
 
     plt.show()
 

@@ -91,7 +91,7 @@ class CaffeNet():
         return features_vector
 
     @staticmethod
-    def get_most_active_features(images_features, n=10):
+    def get_most_active_filters(images_features, n=10):
 
         best_filters = []
 
