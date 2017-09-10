@@ -49,14 +49,14 @@ Suppose the name of the image is *n01440764_18.JPEG*. It's important to don't ch
 
 To test the code:
 
-        $ python cnn_occlusion.py -i /path/to/n01440764_18.JPEG  
+        $ python cnn_occlusion.py /path/to/n01440764_18.JPEG  
         
 ### Parameters:
 
 
 Parameter | Description
 ------------ | -------------
---image_path, -i PATH | The image path 
+image_path, PATH | The image path 
 --weights, -w PATH | The model path (default: /path/to/caffenet_model)
 --prototxt, -p PATH | The prototxt path (default: /path/to/caffenet_prototxt)
 --layer, -l PATH | Extraction layer (default: pool5)
