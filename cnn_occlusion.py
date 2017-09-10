@@ -99,10 +99,12 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-w", "--weights", help="the model file, (default: caffenet).",
+    parser.add_argument("-w", "--weights", help="The model file, (default: caffenet).",
                         default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'))
-    parser.add_argument("-p", "--prototxt", help="prototxt file, (default: caffenet).",
+    parser.add_argument("-p", "--prototxt", help="The prototxt file, (default: caffenet).",
                         default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/deploy.prototxt'))
+    parser.add_argument("--inv_net", default='invdeploy.prototxt',
+                        help="The prototxt file of the deconvnet, (default: invdeploy.prototxt).")
     parser.add_argument("-i", "--image_path", required=True,
                         help="Input image path, an ImageNet one is required.")
     parser.add_argument("-l", "--layer", default='pool5',
@@ -115,6 +117,7 @@ def main():
                         help="The stride of the applied mask, (default: 100).")
     parser.add_argument("--mask_size", type=check_positive, default=50,
                         help="The length of the side of the square mask, (default: 100).")
+    
     args = parser.parse_args()
 
     model_filename = args.prototxt
@@ -124,7 +127,8 @@ def main():
     extraction_layer = args.layer
     stride = args.stride
     mask_size = args.mask_size
-    
+    inv_net_path = argparse.inv_net
+
     # setting the mode, the default is cpu mode
     caffe.set_mode_cpu()
 
@@ -139,7 +143,7 @@ def main():
         sys.exit()
 
     # Loading net and utilities    
-    net = caffe_utils.CaffeNet(model_filename, weight_filename, mean_path, batch_size=batch_size)
+    net = caffe_utils.CaffeNet(model_filename, weight_filename, inv_net, mean_path, batch_size=batch_size)
     
     # Loading image to process
     img = caffe.io.load_image(image_path)

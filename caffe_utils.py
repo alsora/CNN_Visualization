@@ -26,8 +26,10 @@ class CaffeNet():
     batch_size: batch size for the forward pass, default: 1
     input_shape: (rows, cols) the input shape of the net, default: (227, 227)"""
 
-    def __init__(self, model_path,
+    def __init__(self, 
+                 model_path,
                  weights_path,
+                 inv_net_path,
                  mean_path=None,
                  image_scale=255.0,
                  batch_size=1,
@@ -36,6 +38,9 @@ class CaffeNet():
         self.net = caffe.Net(model_path,      # defines the structure of the model
                         weights_path,  # contains the trained weights
                         caffe.TEST)     # use test mode (e.g., don't perform dropout)
+        
+        self.inv_net = caffe.Net(inv_net_path, caffe.TEST)
+        self.initialize_inv_net_params()
 
         self.net.blobs['data'].reshape(batch_size, 3, input_shape[0], input_shape[1])
         self.net.blobs['prob'].reshape(batch_size, )
@@ -46,6 +51,12 @@ class CaffeNet():
 
         self.transformer = self.set_transformer()
 
+    def initialize_inv_net_params(self):
+        for b in self.inv_net.params:
+            self.inv_net.params[b][0].data[...] = self.net.params[b][0].data.reshape(invnet.params[b][0].data.shape)
+
+    def reshape_inv_net(self, best_filter):
+        
     def set_transformer(self):
         transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
         transformer.set_transpose('data', (2, 0, 1)) #move image channels to outermost dimension
@@ -116,7 +127,7 @@ class CaffeNet():
 
         return batch_probabilities
 
-    def get_probs_and_features(self, batch, extraction_layer, most_active_filter=None):
+    def get_probs_and_features(self, batch, most_active_filter=None):
 
         batch_probabilities = []
         features_vector = []
@@ -127,7 +138,7 @@ class CaffeNet():
             batch_output = self.net.forward()
             batch_probabilities.append(batch_output['prob'][0].copy())
             
-            features = self.net.blobs[extraction_layer].data[0]
+            features = self.net.blobs[self.extraction_layer].data[0]
             if most_active_filter is int:
                 features_vector.append(features[most_active_filter].copy())
             else:
