@@ -50,6 +50,13 @@ Suppose the name of the image is *n01440764_18.JPEG*. It's important to don't ch
 To test the code:
 
         $ python cnn_occlusion.py /path/to/n01440764_18.JPEG  
+
+
+You can expect something like this:
+
+
+![alt text](https://github.com/albioTQ/CNN_Visualization/blob/master/occlusion_output.png)
+
         
 ### Parameters:
 
