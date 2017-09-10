@@ -3,13 +3,10 @@ Implementation of visualization techniques for CNN in Caffe (t-sne, DeconvNet, I
 
 #### Requirements:
 
-- **Caffe** and **pyCaffe**, [Installation guide](http://caffe.berkeleyvision.org/install_apt.html).
+- **Caffe** and **pyCaffe**, [Installation guide](http://caffe.berkeleyvision.org/installation.html).
 
 
-- numpy, sklearn, matplotlib
-
-
-
+- numpy, scikit-image, sklearn
 
 
 ## t-sne:
@@ -37,18 +34,18 @@ NOTE: The -g flag has to be used only if we want to run the script in gpu mode.
 
 
 
-## occlusion:
+## OCCLUSION:
 The file cnn_occlusion.py is an implementation of the occlusion technics described in the section **4.2** of the following paper: [Visualizing and Understanding Convolutional Networks](https://www.cs.nyu.edu/~fergus/papers/zeilerECCV2014.pdf).
 
 ### How to use
 In the following, the procedure to use **caffenet** will be described. It is possible to use different models by changing the default parameters. The **caffenet** prototxt is already included in the **caffe** installation. 
 
-To download the caffemodel file in the proper place it's run:
+To download the caffemodel file in the proper place run:
 
         $ wget -O path/to/caffe/models/bvls_reference_caffenet/bvlc_reference_caffenet.caffemodel http://dl.caffe.berkeleyvision.org/bvlc_reference_caffenet.caffemodel
 
-Choose a class from the file **synset_words.txt** and download some images from [Image-Net](www.image-net.org).
-Suppose the name of one image is *n01440764_18.JPEG*. It's important to don't change the name of the images since it contains the synset.
+Choose a class from the file **synset_words.txt** and download at least one image from [Image-Net](www.image-net.org).
+Suppose the name of the image is *n01440764_18.JPEG*. It's important to don't change the name of the image since it contains the synset reference.
 
 To test the code:
 
