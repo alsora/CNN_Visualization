@@ -6,7 +6,7 @@ Implementation of visualization techniques for CNN in Caffe (t-sne, DeconvNet, I
 - **Caffe** and **pyCaffe**, [Installation guide](http://caffe.berkeleyvision.org/installation.html).
 
 
-- numpy, scikit-image, sklearn
+- numpy, scikit-image, sklearn, skdata
 
 
 ## t-sne:
