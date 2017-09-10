@@ -75,7 +75,7 @@ def main():
     pycaffe_path = os.path.dirname(caffe.__file__)
     caffe_path = os.path.normpath(os.path.join(pycaffe_path, '../../'))
     mean_path = os.path.join(pycaffe_path, 'imagenet/ilsvrc_2012_mean.npy')
-    synsets_num_path = os.path.join(os.getcwd, 'synsets.txt')
+    synsets_num_path = os.path.join(os.getcwd(), 'synsets.txt')
     synsets_to_class_path = os.path.join(os.getcwd(), 'synset_words.txt')
 
     # building dictionaries and inverse ones
@@ -93,28 +93,32 @@ def main():
 
     with open(synsets_to_class_path, 'r') as fp:
         for line in fp:
-            [synset, class_] = line.strip().split('\t')
-            synset_to_class[synset] = class_
-            class_to_synset[class_] = synset
+        	synset_class = line.strip().split()
+        	synset = synset_class[0]
+        	class_ = " ".join(synset_class[1:])
+        	synset_to_class[synset] = class_
+        	class_to_synset[class_] = synset
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-w", "--weights", help="the model file, (default: caffenet).",
-                        default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'))
-    parser.add_argument("-p", "--prototxt", help="prototxt file, (default: caffenet).",
-                        default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/deploy.prototxt'))
-    parser.add_argument("-i", "--image_path", required=True,
+    parser.add_argument('image_path', metavar='PATH', type=str,
                         help="Input image path, an ImageNet one is required.")
-    parser.add_argument("-l", "--layer", default='pool5',
-                        help="Extraction layer, (default: pool5)")
-    parser.add_argument("-g", "--gpu", default=-1,
-                        help="GPU number, (default: -1, aka disabled)")
-    parser.add_argument("--batch_size", type=int, default=4,
-                        help="Batch size, (default: 1).")
-    parser.add_argument("--stride", type=check_positive, default=70, 
-                        help="The stride of the applied mask, (default: 100).")
-    parser.add_argument("--mask_size", type=check_positive, default=50,
-                        help="The length of the side of the square mask, (default: 100).")
+    parser.add_argument("-w", "--weights", metavar='PATH', type=str, 
+    					help="the model file, (default: %(default)s).", 
+                        default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'))
+    parser.add_argument("-p", "--prototxt", metavar='PATH', type=str, 
+    					help="prototxt file, (default: %(default)s).",
+                        default=os.path.join(caffe_path, 'models/bvlc_reference_caffenet/deploy.prototxt'))
+    parser.add_argument("-l", "--layer", default='pool5', metavar='layer_name', type=str,
+                        help="Extraction layer, (default: %(default)s)")
+    parser.add_argument("-g", "--gpu", default=-1, metavar='INT', type=int,
+                        help="GPU number, (default: %(default)s aka disabled)")
+    parser.add_argument("--batch_size", type=int, default=1, metavar='INT',
+                        help="Batch size, (default: %(default)s).")
+    parser.add_argument("--stride", type=check_positive, default=50, metavar='INT',
+                        help="The stride of the applied mask, (default: %(default)s).")
+    parser.add_argument("--mask_size", type=check_positive, default=100, metavar='INT',
+                        help="The length of the side of the square mask, (default: %(default)s).")
     args = parser.parse_args()
 
     model_filename = args.prototxt
@@ -186,7 +190,7 @@ def main():
         
         backspace(to_print)
 
-    print ''
+    print 
 
     # heat_map of probability of the true class, 
     heat_map_size = img.shape[:2]
@@ -243,12 +247,13 @@ def main():
     plt.colorbar(img, ax=ax3, fraction=0.046, pad=0.04)
 
     norm = Normalize(vmin=0, vmax=len(idx_to_synset))
+    
+    cmap = plt.get_cmap('brg')
     ax4.imshow(heat_map_synsets, cmap=cmap, interpolation='none', norm=norm)
     ax4.axis('off')
     ax4.set_title('Classifier, most probable class')
     synsets_set = list(set(heat_map_synsets.flatten().tolist()))
     class_set = [synset_to_class[idx_to_synset[x]].split(',')[0] for x in synsets_set]
-    
     colors = [cmap(norm(x)) for x in synsets_set]
     handles = []
     for synset_id, color in zip(synsets_set, colors):
