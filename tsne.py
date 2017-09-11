@@ -108,7 +108,7 @@ def computeMapPoints(P, max_iter=200, no_dims=2):
             grad[i, :] = np.sum(np.tile(PQ[:, i] * num[:, i], (no_dims, 1)).T * (Y[i, :] - Y), 0)
 
         # Perform the update
-        if iter_ < 250:
+        if iter < 250:
             momentum = initial_momentum
         else:
             momentum = final_momentum
@@ -134,7 +134,7 @@ def computeMapPoints(P, max_iter=200, no_dims=2):
         # Compute current value of cost function
         if (iter + 1) % 10 == 0:
             C = np.sum(P * np.log(P / Q))
-            to_print = "Iteration {} : error {}".format(iter_ + 1, C)
+            to_print = "Iteration {} : error {}".format(iter + 1, C)
             backspace(to_print)
 
         # Stop early exaggeration

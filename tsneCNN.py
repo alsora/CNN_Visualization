@@ -20,7 +20,8 @@ netLayers = {
     'caffenet': 'fc7',
 
    #'googlenet': 'inception_5b/output'
-   'googlenet': 'loss3/classifier'
+   'googlenet': 'loss3/classifier',
+   'resnet': 'fc1000'
 }
 
 
@@ -89,7 +90,7 @@ def main(argv):
     net = caffe_utils.CaffeNet(model_filename, weight_filename, mean_path)
 
     #Create Images and labels
-    numberImagesPerClass = 50
+    numberImagesPerClass = 150
 
     classes = ['n02119789', 'n03773504', 'n04254680', 'n04429376', 'n04507155']
     #If you don't provide synsets, it will take images from all the sub-folders in images_dir

@@ -1,5 +1,5 @@
 # CNN_Visualization
-Implementation of visualization techniques for CNN in Caffe (t-sne, DeconvNet, Image occlusions)
+Implementation of visualization techniques for CNN in Caffe (t-SNE, DeconvNet, Image occlusions)
 
 #### Requirements:
 
@@ -12,25 +12,50 @@ Implementation of visualization techniques for CNN in Caffe (t-sne, DeconvNet, I
 ## t-sne:
 The file tsne.py contains an implementation of t-Stochastic Neighbor Embedding as described in the following paper: [Visualizing Data using t-SNE](https://lvdmaaten.github.io/publications/papers/JMLR_2008.pdf).
 
-It's possible to test this implementation stand-alone on the well known mnist dataset. It's necessary to download data and labels from [here](https://github.com/azinik/java-deeplearning/tree/master/deeplearning4j-core/src/main/resources) and then simply run
+It's possible to test this implementation stand-alone on the well known mnist dataset. It's necessary to download data and labels from [here](https://github.com/azinik/java-deeplearning/tree/master/deeplearning4j-core/src/main/resources), put them in the same folder of the source code and run
+
 
         $ python tsne.py
 
-To test how the implementation works with features extracted from a CNN, it's necessary first of all to download some images from ImageNet and extract the synset folders in a directory  called "image_dir".
+To test how the implementation works with features extracted from a CNN, we will use the file tsneCNN.py.
 
-In order to get the mapping from network output to synsets it's necessary to run
 
-        $ ./path/to/caffe/data/ilsvrc12/data/get_ilsvrc_aux.sh
+Parameter | Description
+------------ | -------------
+--input_im, -i PATH | Path to the folder containing the synset image folders
+--weights, -w PATH | The model path (default: /path/to/caffenet_model)
+--prototxt, -p PATH | The prototxt path (default: /path/to/caffenet_prototxt)
+--gpu, -g | If this flag is used, the code will run in gpu mode
+--net_type, -n STRING | The type of the CNN we have provided (options are resnet, googlenet, vggnet)
 
-It's possible to test the implementation on the standard CaffeNet network. To download the caffemodel file in the proper place it's necessary to run
+The simplest way to test the code consists in downloading the standard CaffeNet network using 
 
         $ wget -O path/to/caffe/models/bvls_reference_caffenet/bvlc_reference_caffenet.caffemodel http://dl.caffe.berkeleyvision.org/bvlc_reference_caffenet.caffemodel
 
-Finally it's possible to launch the main script.
+
+Get the mapping from network output to synsets using
+
+        $ ./path/to/caffe/data/ilsvrc12/data/get_ilsvrc_aux.sh
+
+Download some synsets of images from ImageNet and place them in a folder called "image_dir".
+
+
+Launch the script exploiting default parameters.
 
         $ python tsneCNN.py -i image_dir -g
 
-NOTE: The -g flag has to be used only if we want to run the script in gpu mode.
+
+It's possible to test different networks simply by downloading their prototxt and weights and providing the correct paths to the script.
+
+The expected output consists in: 
+
+- The 2-dimensional embedding of the extracted features (each image is represented as a "dot" coloured accoring to its real or predicted class). This allows to see how this unsupervised method performs really well regardless of the CNN prediction.
+
+- A video showing how the embedding changes through the t-SNE iterations. [Example](https://vimeo.com/233375098)
+
+- The real images organized according to the embedding. This allows to see how t-SNE preserves local differences within the same class of images.
+
+
 
 
 
