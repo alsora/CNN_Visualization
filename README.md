@@ -51,10 +51,11 @@ The expected output consists in:
 
 - The 2-dimensional embedding of the extracted features (each image is represented as a "dot" coloured accoring to its real or predicted class). This allows to see how this unsupervised method performs really well regardless of the CNN prediction.
 
-- A video showing how the embedding changes through the t-SNE iterations. [Example](https://vimeo.com/233375098)
+- A video showing how the embedding changes through the t-SNE iterations.
 
 - The real images organized according to the embedding. This allows to see how t-SNE preserves local differences within the same class of images.
 
+![alt text](https://github.com/albioTQ/CNN_Visualization/blob/master/t-sne.gif)
 
 
 
