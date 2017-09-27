@@ -92,14 +92,16 @@ def main(argv):
     #Create Images and labels
     numberImagesPerClass = 150
 
-    classes = ['n02119789', 'n03773504', 'n04254680', 'n04429376', 'n04507155']
+    #classes = ['n02119789', 'n03773504', 'n04254680', 'n04429376', 'n04507155']
     #If you don't provide synsets, it will take images from all the sub-folders in images_dir
+    print "Loading images from provided directories... "
     names, images, labels = loadImageNetFiles(images_dir, numberImagesPerClass)#, classes)
 
     #Preprocess images
     preprocessedImages = net.preprocess_images(images)
 
     #Forward pass to extract features and predict labels
+    print "Performing a forward pass on all the images.... "
     probs, features = net.get_probs_and_features(preprocessedImages, extractionLayerName)
 
     predictedProbsTop5 =[np.argsort(x)[-1:-5:-1] for x in probs]

@@ -26,7 +26,7 @@ Parameter | Description
 --weights, -w PATH | The model path (default: /path/to/caffenet_model)
 --prototxt, -p PATH | The prototxt path (default: /path/to/caffenet_prototxt)
 --gpu, -g | If this flag is used, the code will run in gpu mode
---net_type, -n STRING | The type of the CNN we have provided (options are resnet, googlenet, vggnet)
+--net_type, -n STRING | The type of the CNN we have provided (options are resnet, googlenet, caffenet. default:caffenet)
 
 The simplest way to test the code consists in downloading the standard CaffeNet network using 
 
@@ -38,7 +38,7 @@ Get the mapping from network output to synsets using
         $ ./path/to/caffe/data/ilsvrc12/data/get_ilsvrc_aux.sh
 
 Download some synsets of images from ImageNet and place them in a folder called "image_dir".
-
+The script will take up to 150 images from each subfolder of "image_dir". It's assumed that each of these subfolder is a synset directory as downloaded from ImageNet.
 
 Launch the script exploiting default parameters.
 

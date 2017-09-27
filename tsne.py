@@ -9,6 +9,10 @@ from skdata.mnist.views import OfficialImageClassification
 from skimage.transform import resize
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
+def backspace(n):
+    sys.stdout.write('\r'+n)
+    sys.stdout.flush()
+
 
 def binarySearch(comparisonMethod, terms, tolerance=1e-5, objective=30.0):
     valuemin = 0.1
@@ -20,10 +24,10 @@ def binarySearch(comparisonMethod, terms, tolerance=1e-5, objective=30.0):
     PP = comparisonMethod(terms, value)
 
     Pdiff = PP - objective
-    tries = 0
+    binaryTries = 0
 
-    while tries < 50 and np.abs(Pdiff) > tolerance:
-        # If not, increase or decrease precision
+    while binaryTries < 100 and np.abs(Pdiff) > tolerance:
+        #Try new values until the perplexity difference is under the threshold
         if Pdiff < 0:
             valuemin = value
         else:
@@ -31,28 +35,18 @@ def binarySearch(comparisonMethod, terms, tolerance=1e-5, objective=30.0):
 
         value = (valuemin + valuemax) / 2.0
 
-        # Recompute the values
+        #Recompute the perplexity
         PP = comparisonMethod(terms, value)
 
         Pdiff = PP - objective
-        tries = tries + 1
+        binaryTries += 1
 
     return value
 
 
-def computeRowP(D=np.array([]), sigma=1.0):
-    precision = 1.0 / sigma
-
-    P = np.exp(-D * precision)
-    P = P / sum(P)
-
-    return P
-
-
 def computePerplexity(D=np.array([]), sigma=1.0):
-    """Compute the perplexity and the P-row for a specific value of the precision of a Gaussian distribution."""
+    #Compute perplexity as function of the gaussian distribution variance sigma
 
-    # Compute P-row and corresponding perplexity
     precision = 1.0 / sigma
 
     P = np.exp(-D * precision)
@@ -67,54 +61,68 @@ def computePerplexity(D=np.array([]), sigma=1.0):
     return PP
 
 
-def computeMapPoints(P, max_iter=200, no_dims=2):
-    n = P.shape[0]
+def computeMapPoints(P, numIter=200, numOutputDimensions=2):
+    numPoints = P.shape[0]
     initial_momentum = 0.5
     final_momentum = 0.8
     eta = 100
     min_gain = 0.01
-    Y = np.random.normal(0, 1e-4, (n, no_dims))
-    grad = np.zeros((n, no_dims))
-    update = np.zeros((n, no_dims))
-    gains = np.ones((n, no_dims))
+    #initialize containers with the correct dimension
+    gradients = np.zeros((numPoints, numOutputDimensions))
+    increment = np.zeros((numPoints, numOutputDimensions))
+    gains = np.ones((numPoints, numOutputDimensions))
 
     mapPointsStorage = []
 
-    P = P + np.transpose(P)
-    P = P / np.sum(P)
-    P = P * 4  # early exaggeration
-    P = np.maximum(P, 1e-12)
+    #Compute symmetric conditional probabilities (high dimensional space)  
+    numeratorPsymmetric = P + np.transpose(P)
+    denominatorPsymmetric = np.sum(numeratorPsymmetric)
+    Psymmetric = numeratorPsymmetric / denominatorPsymmetric
 
-    # Run iterations
-    for iter in range(max_iter):
+    Psymmetric *= 4  #Early exaggeration
+    #Lower bound on minimum value of high dimensional probabilities
+    Psymmetric = np.maximum(Psymmetric, 1e-12) 
 
-        mapPointsStorage.append(Y)
+    #Initial random low dimensional embedding
+    lowDimPoints = np.random.normal(0, 1e-4, (numPoints, numOutputDimensions))
 
-        # Compute pairwise affinities
+    momentum = initial_momentum
+    #T-sne iterations
+    for iter in range(numIter):
 
+        mapPointsStorage.append(lowDimPoints)
 
-        D = pairwise_distances(Y, squared=True)
+        #Stop early exaggeration 
+        if iter == 100:
+            Psymmetric /= 4
 
-        num = 1 / (1 + D)
-
-        num[range(n), range(n)] = 0
-        Q = num / np.sum(num)
-        Q = np.maximum(Q, 1e-12)
-
-        # Compute gradient
-        PQ = P - Q
-
-        for i in range(n):
-            grad[i, :] = np.sum(np.tile(PQ[:, i] * num[:, i], (no_dims, 1)).T * (Y[i, :] - Y), 0)
-
-        # Perform the update
-        if iter < 250:
-            momentum = initial_momentum
-        else:
+        #Switch to the higher momentum after some iterations
+        if iter == 250:
             momentum = final_momentum
 
-        toBeIncreased = update * grad < 0
-        toBeDecreased = update * grad >= 0
+        #Compute low dimensional pairwise distances
+        D = pairwise_distances(lowDimPoints, squared=True)
+
+        #Compute joint probabilities (low dimensional space) Q
+        numeratorQ = 1 / (1 + D)
+        #Set values on the diagonal to 0
+        numeratorQ[range(numPoints), range(numPoints)] = 0 
+        denominatorQ = np.sum(numeratorQ)
+        Q = numeratorQ/ denominatorQ
+        #Lower bound on the minimum value for low dim probabilities
+        Q = np.maximum(Q, 1e-12)
+        
+        #Differences between high and low dimensional probabilities
+        P_Q = Psymmetric - Q
+
+        #Compute Kullback-Leibler divergence gradient 
+        for i in range(numPoints):
+            gradients[i, :] = np.sum(np.tile(P_Q[:, i] * numeratorQ[:, i], (numOutputDimensions, 1)).T * (lowDimPoints[i, :] - lowDimPoints), 0)
+
+        #Select which values have to be increased or decreased
+        toBeIncreased = increment * gradients < 0
+        toBeDecreased = increment * gradients >= 0
+        #Set the corresponding gains
         gains[toBeIncreased] += 0.2
         gains[toBeDecreased] *= 0.8
 
@@ -122,30 +130,25 @@ def computeMapPoints(P, max_iter=200, no_dims=2):
 
         learningRate = eta * gains
 
-        update = momentum * update - learningRate * grad
+        increment = momentum * increment - learningRate * gradients
 
-        Y = Y + update
-        Y = Y - np.tile(np.mean(Y, 0), (n, 1))
-        
-        def backspace(n):
-            sys.stdout.write('\r'+n)
-            sys.stdout.flush()
+        lowDimPoints = lowDimPoints + increment
+        lowDimPoints = lowDimPoints - np.tile(np.mean(lowDimPoints, 0), (numPoints, 1))
 
-        # Compute current value of cost function
+        #Compute and display the current cost every 10 iterations
         if (iter + 1) % 10 == 0:
-            C = np.sum(P * np.log(P / Q))
-            to_print = "Iteration {} : error {}".format(iter + 1, C)
+            cost = np.sum(Psymmetric * np.log(Psymmetric / Q))
+            to_print = "Iteration {} : error {}".format(iter + 1, cost)
             backspace(to_print)
 
-        # Stop early exaggeration
-        if iter == 100:
-            P = P / 4
-    print
-    mapPointsStorage.append(Y)
+
+    #Insert last iteration points
+    mapPointsStorage.append(lowDimPoints)
     return mapPointsStorage
 
 
 def computeProbabilities(X, perplexity=30.0, tolerance=1e-5):
+    #Perform an initial dimensionality reduction
     pca = PCA(n_components=50)
 
     X = pca.fit_transform(X)
@@ -163,9 +166,14 @@ def computeProbabilities(X, perplexity=30.0, tolerance=1e-5):
 
         sigma = binarySearch(computePerplexity, distancesFromI, tolerance, perplexity)
 
-        Prow = computeRowP(distancesFromI, sigma)
-
-        P[i, :] = np.concatenate((Prow[0:i], [0.0], Prow[i:numSamples]))
+        precision = 1.0 / sigma
+        #Compute a "row" of matrix P: the probabilities wrt point I
+        PwrtI = np.exp(- distancesFromI * precision)
+        PwrtI /= sum(PwrtI)
+        #Insert an element corresponding to I wrt I
+        PwrtI = np.concatenate((PwrtI[0:i], [0.0], PwrtI[i:numSamples]))
+        #Insert the row
+        P[i, :] = PwrtI
 
     return P
 
@@ -240,7 +248,7 @@ def showMovie(positions, labels):
 
     scat = ax.scatter(currentPositions[:, 0], currentPositions[:, 1], 20, coloredLabels)
 
-    def update(frame_number):
+    def increment(frame_number):
         num = frame_number * 5
 
         currentPositions = positions[num]
@@ -249,9 +257,10 @@ def showMovie(positions, labels):
 
     numFrames = len(positions) / 5
 
-    animation = FuncAnimation(fig, update, interval=100, frames=numFrames, repeat=False)
+    animation = FuncAnimation(fig, increment, interval=100, frames=numFrames, repeat=False)
     plt.show()
     animation.save('movie.mp4')
+
 
 
 def imagesPlot(images, positions, zoom=0.25):
@@ -274,7 +283,6 @@ def imagesPlot(images, positions, zoom=0.25):
         ax.autoscale()
 
     plt.show()
-
 
 def test():
     X = np.loadtxt("mnist2500_X.txt")
