@@ -26,7 +26,7 @@ Parameter | Description
 --weights, -w PATH | The model path (default: /path/to/caffenet_model)
 --prototxt, -p PATH | The prototxt path (default: /path/to/caffenet_prototxt)
 --gpu, -g | If this flag is used, the code will run in gpu mode
---net_type, -n STRING | The type of the CNN we have provided (options are resnet, googlenet, caffenet. default:caffenet)
+--net_type, -n STRING | The type of the CNN, options are resnet, googlenet, caffenet (default: caffenet)
 
 The simplest way to test the code consists in downloading the standard CaffeNet network using 
 
@@ -45,7 +45,7 @@ Launch the script exploiting default parameters.
         $ python tsneCNN.py -i image_dir -g
 
 
-It's possible to test different networks simply by downloading their prototxt and weights and providing the correct paths to the script.
+It's possible to test different networks simply by downloading their prototxt and weights and providing the paths to these file when launching the script. Do not forget to set also the network type! This argument is used to choose from which layer features have to be extracted.
 
 The expected output consists in: 
 
@@ -53,7 +53,7 @@ The expected output consists in:
 
 - A video showing how the embedding changes through the t-SNE iterations.
 
-- The real images organized according to the embedding. This allows to see how t-SNE preserves local differences within the same class of images.
+- The real images organized according to the embedding. This allows to see how t-SNE preserves local differences within the same class of images (N.B. Zoom on an area of the image to see something meaningful)
 
 ![alt text](https://github.com/albioTQ/CNN_Visualization/blob/master/t-sne.gif)
 
