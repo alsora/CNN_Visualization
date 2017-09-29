@@ -224,12 +224,9 @@ def main():
     min_feature = np.min(heat_map_features)
 
     heat_map_features = (heat_map_features - min_feature)/(max_feature - min_feature)
-
     heat_map_synsets = np.delete(heat_map_synsets, np.where(means_0 == 0)[0], axis=0)
     heat_map_synsets = np.delete(heat_map_synsets, np.where(means_1 == 0)[0], axis=1)
-    heat_map_synsets = np.floor((heat_map_synsets - np.min(heat_map_synsets))/(np.max(heat_map_synsets) - np.min(heat_map_synsets))*999)
 
-    # plotting
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
     f.subplots_adjust()
 
